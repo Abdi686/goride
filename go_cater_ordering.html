@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GO CATER - Smart Ordering & Costing Matrix</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #0f172a; color: #f8fafc; padding: 20px; }
+        .card { background: #1e293b; max-width: 800px; margin: 0 auto; padding: 25px; border-radius: 12px; border: 1px solid #334155; }
+        h2 { color: #38bdf8; margin-top: 0; margin-bottom: 5px; }
+        .subtitle { color: #94a3b8; font-size: 0.9rem; margin-bottom: 25px; }
+        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; color: #94a3b8; font-weight: bold; font-size: 0.9rem; }
+        input, select { width: 100%; padding: 10px; background: #0f172a; border: 1px solid #334155; border-radius: 6px; color: white; box-sizing: border-box; }
+        
+        /* Order Table Styling */
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; background: #111827; border-radius: 8px; overflow: hidden; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #1f2937; }
+        th { background: #1e293b; color: #38bdf8; font-size: 0.9rem; }
+        td { font-size: 0.95rem; }
+        
+        .btn { background: #0284c7; color: white; border: none; padding: 12px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 0.95rem; }
+        .btn:hover { background: #0369a1; }
+        .btn-success { background: #10b981; margin-top: 20px; width: 100%; padding: 14px; font-size: 1rem; }
+        .btn-success:hover { background: #059669; }
+        .delete-btn { background: #ef4444; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; }
+        .delete-btn:hover { background: #dc2626; }
+        
+        .summary-box { background: #111827; padding: 15px; border-radius: 8px; border: 1px solid #334155; margin-top: 25px; display: flex; justify-content: space-between; font-weight: bold; }
+        .text-green { color: #10b981; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>GO CATER Procurement</h2>
+        <p class="subtitle">Smart Ordering, Dynamic Costing & Spreadsheet Generator</p>
+        
+        <!-- Meta Row -->
+        <div class="grid-3">
+            <div>
+                <label>Order Placed By</label>
+                <input type="text" id="orderStaff" placeholder="Your Name" required>
+            </div>
+            <div>
+                <label>Target Delivery Date</label>
+                <input type="date" id="deliveryDate" required>
+            </div>
+            <div>
+                <label>Supplier</label>
+                <select id="supplierName">
+                    <option value="Main Wholesale Depot">Main Wholesale Depot</option>
+                    <option value="Fresh Produce Hub">Fresh Produce Hub</option>
+                </select>
+            </div>
+        </div>
+
+        <hr style="border-color: #334155; margin: 25px 0;">
+
+        <!-- Selection Matrix Add Item Row -->
+        <label>Select Ingredient to Add to Order Sheet</label>
+        <div class="grid-3" style="grid-template-columns: 2fr 1fr auto; align-items: end;">
+            <div>
+                <select id="ingredientDropdown" onchange="updateEstimatedCosts()">
+                    <!-- Value formats: "Name|CostPerUnit|SuggestedRetailPrice" -->
+                    <option value="">-- Choose an Ingredient --</option>
+                    <option value="Aged Basmati Rice (20kg Bag)|35.00|120.00">Aged Basmati Rice (20kg Bag)</option>
+                    <option value="Premium Chicken Breast (5kg)|28.50|95.00">Premium Chicken Breast (5kg)</option>
+                    <option value="Karak Chai Spices Blend (1kg)|14.00|45.00">Karak Chai Spices Blend (1kg)</option>
+                    <option value="Catering Whole Milk (Per Case)|11.20|35.00">Catering Whole Milk (Per Case)</option>
+                    <option value="Traditional Breakfast Sausages (Pack)|18.00|55.00">Traditional Breakfast Sausages (Pack)</option>
+                    <option value="Fresh Morning Baps (Tray of 48)|8.50|32.00">Fresh Morning Baps (Tray of 48)</option>
+                    <option value="Cooking Oil (20L Drum)|24.00|75.00">Cooking Oil (20L Drum)</option>
+                </select>
+            </div>
+            <div>
+                <input type="number" id="orderQty" placeholder="Qty" min="1" value="1">
+            </div>
+            <div>
+                <button type="button" class="btn" onclick="addItemToOrder()">Add Item</button>
+            </div>
+        </div>
+
+        <!-- Live Cart Display -->
+        <table id="orderTable">
+            <thead>
+                <tr>
+                    <th>Ingredient Description</th>
+                    <th>Qty</th>
+                    <th>Cost Price</th>
+                    <th>Est. Revenue</th>
+                    <th>Gross Profit</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody id="orderTableBody">
+                <!-- Dynamic rows appear here -->
+            </tbody>
+        </table>
+
+        <!-- Live Totals Summary Box -->
+        <div class="summary-box">
+            <div>Total Cost: £<span id="displayTotalCost">0.00</span></div>
+            <div>Total Est. Revenue: £<span id="displayTotalRev">0.00</span></div>
+            <div class="text-green">Est. Net Profit: £<span id="displayTotalProfit">0.00</span></div>
+        </div>
+
+        <!-- Action Button -->
+        <button type="button" class="btn btn-success" onclick="generateSpreadsheet()">Export Order Sheet to Excel / CSV</button>
+    </div>
+
+    <script>
+        // Auto-populate delivery date for tomorrow
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        document.getElementById('deliveryDate').valueAsDate = tomorrow;
+
+        let currentOrderItems = [];
+
+        function addItemToOrder() {
+            const dropdown = document.getElementById('ingredientDropdown');
+            const qtyInput = document.getElementById('orderQty');
+            
+            if (!dropdown.value) {
+                alert("Please select an ingredient first.");
+                return;
+            }
+
+            const [name, costPrice, sellPrice] = dropdown.value.split('|');
+            const qty = parseInt(qtyInput.value) || 1;
+
+            const totalCost = parseFloat(costPrice) * qty;
+            const totalRevenue = parseFloat(sellPrice) * qty;
+            const grossProfit = totalRevenue - totalCost;
+
+            // Add to array matrix
+            currentOrderItems.push({ name, qty, costPrice: parseFloat(costPrice), totalCost, totalRevenue, grossProfit });
+            
+            // Render UI & reset quantity
+            renderOrderTable();
+            qtyInput.value = "1";
+            dropdown.value = "";
+        }
+
+        function removeItem(index) {
+            currentOrderItems.splice(index, 1);
+            renderOrderTable();
+        }
+
+        function renderOrderTable() {
+            const tbody = document.getElementById('orderTableBody');
+            tbody.innerHTML = "";
+
+            let aggregateCost = 0;
+            let aggregateRev = 0;
+            let aggregateProfit = 0;
+
+            currentOrderItems.forEach((item, index) => {
+                aggregateCost += item.totalCost;
+                aggregateRev += item.totalRevenue;
+                aggregateProfit += item.grossProfit;
+
+                const row = `<tr>
+                    <td><strong>${item.name}</strong></td>
+                    <td>${item.qty}</td>
+                    <td>£${item.totalCost.toFixed(2)}</td>
+                    <td>£${item.totalRevenue.toFixed(2)}</td>
+                    <td class="text-green">£${item.grossProfit.toFixed(2)}</td>
+                    <td><button type="button" class="delete-btn" onclick="removeItem(${index})">✕</button></td>
+                </tr>`;
+                tbody.innerHTML += row;
+            });
+
+            // Update bottom dashboard summary layout panel
+            document.getElementById('displayTotalCost').innerText = aggregateCost.toFixed(2);
+            document.getElementById('displayTotalRev').innerText = aggregateRev.toFixed(2);
+            document.getElementById('displayTotalProfit').innerText = aggregateProfit.toFixed(2);
+        }
+
+        function generateSpreadsheet() {
+            if (currentOrderItems.length === 0) {
+                alert("Your order matrix is currently empty!");
+                return;
+            }
+
+            const staff = document.getElementById('orderStaff').value || "Not Specified";
+            const delDate = document.getElementById('deliveryDate').value;
+            const supplier = document.getElementById('supplierName').value;
+
+            // Create CSV header strings
+            let csvContent = "data:text/csv;charset=utf-8,";
+            csvContent += `GO CATER ORDER PROFILE\r\n`;
+            csvContent += `Staff Member,${staff},Delivery Date,${delDate},Supplier,${supplier}\r\n\r\n`;
+            csvContent += "Ingredient Description,Quantity ordered,Cost Price Per Unit,Combined Cost,Projected Total Revenue,Gross Profit Yield\r\n";
+
+            // Add items line items dynamically 
+            currentOrderItems.forEach(item => {
+                csvContent += `"${item.name}",${item.qty},£${item.costPrice.toFixed(2)},£${item.totalCost.toFixed(2)},£${item.totalRevenue.toFixed(2)},£${item.grossProfit.toFixed(2)}\r\n`;
+            });
+
+            // Trigger a clean native device file download sequence safely
+            const encodedUri = encodeURI(csvContent);
+            const downloadLink = document.createElement("a");
+            downloadLink.setAttribute("href", encodedUri);
+            downloadLink.setAttribute("download", `Go_Cater_Order_${delDate}.csv`);
+            document.body.appendChild(downloadLink);
+            downloadLink.click();
+            document.body.removeChild(downloadLink);
+        }
+    </script>
+</body>
+</html>

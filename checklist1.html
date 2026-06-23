@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GO RIDE - Vehicle Pre-Use Inspection</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; background: #0f172a; color: #f8fafc; padding: 20px; }
+        .card { background: #1e293b; max-width: 500px; margin: 0 auto; padding: 25px; border-radius: 12px; border: 1px solid #334155; }
+        h2 { color: #38bdf8; margin-top: 0; }
+        .input-group { margin-bottom: 20px; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        label { display: block; margin-bottom: 8px; color: #94a3b8; font-weight: bold; font-size: 0.9rem; }
+        input[type="text"], input[type="number"], input[type="date"], input[type="time"], textarea { width: 100%; padding: 10px; background: #0f172a; border: 1px solid #334155; border-radius: 6px; color: white; box-sizing: border-box; }
+        .check-item { display: flex; align-items: center; background: #111827; padding: 12px; margin-bottom: 10px; border-radius: 8px; border: 1px solid #1f2937; }
+        input[type="checkbox"] { width: 20px; height: 20px; margin-right: 15px; accent-color: #38bdf8; }
+        .btn { background: #0284c7; color: white; border: none; padding: 12px; width: 100%; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 1rem; margin-top: 15px; }
+        .btn:hover { background: #0369a1; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>GO RIDE Logistics</h2>
+        <p style="color:#94a3b8; font-size:0.9rem;">Driver Pre-Shift Fleet Safety Verification</p>
+        
+        <form id="inspectionForm" onsubmit="sendEmail(event)">
+            <div class="input-group">
+                <label>Driver's Name</label>
+                <input type="text" id="driverName" placeholder="Enter your full name" required>
+            </div>
+
+            <div class="grid-2">
+                <div class="input-group">
+                    <label>Date</label>
+                    <input type="date" id="logDate" required>
+                </div>
+                <div class="input-group">
+                    <label>Time Start</label>
+                    <input type="time" id="timeStart" required>
+                </div>
+            </div>
+
+            <div class="grid-2">
+                <div class="input-group">
+                    <label>Amount of Passengers</label>
+                    <input type="number" id="passengers" placeholder="0" min="0" required>
+                </div>
+                <div class="input-group">
+                    <label>Empty Seats</label>
+                    <input type="number" id="emptySeats" placeholder="0" min="0" required>
+                </div>
+            </div>
+
+            <hr style="border-color: #334155; margin: 25px 0;">
+
+            <div class="input-group">
+                <label>Vehicle Asset Registration ID</label>
+                <input type="text" id="vehicleReg" placeholder="e.g. BX26 REG" required>
+            </div>
+            <div class="input-group">
+                <label>Current Mileage (Odometer)</label>
+                <input type="number" id="mileage" placeholder="Enter total miles" required>
+            </div>
+            
+            <hr style="border-color: #334155; margin: 25px 0;">
+            
+            <label>Safety Inspection Points</label>
+            <div class="check-item"><input type="checkbox" id="tyres" required> <span>Tyre Tread & Pressure OK</span></div>
+            <div class="check-item"><input type="checkbox" id="brakes" required> <span>Braking System Functional</span></div>
+            <div class="check-item"><input type="checkbox" id="lights" required> <span>Lights & Indicators Operational</span></div>
+            <div class="check-item"><input type="checkbox" id="fluids" required> <span>Fluid Levels Checked (Oil/Coolant)</span></div>
+            
+            <div class="input-group" style="margin-top:20px;">
+                <label>Defect Notes / Structural Observations</label>
+                <textarea id="defects" rows="3" placeholder="Describe any minor cosmetics or issues..."></textarea>
+            </div>
+
+            <div class="input-group" style="text-align: center; margin-top: 25px; margin-bottom: 10px;">
+                <label style="margin-bottom: 10px;">Scan to Share/Open This Logistics Checklist</label>
+                <div style="background: white; padding: 15px; display: inline-block; border-radius: 12px;">
+                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=file:///C:/Users/Birmingham/Documents/Hafiss/checklist1.html" alt="Logistics QR Code">
+                </div>
+            </div>
+            
+            <button type="submit" class="btn">Send Inspection via Email</button>
+        </form>
+    </div>
+
+    <script>
+        document.getElementById('logDate').valueAsDate = new Date();
+
+        function sendEmail(event) {
+            event.preventDefault();
+            const destinationEmail = "Abdi@gohafeezgroup.com"; 
+
+            const driver = document.getElementById('driverName').value;
+            const date = document.getElementById('logDate').value;
+            const time = document.getElementById('timeStart').value;
+            const passengers = document.getElementById('passengers').value;
+            const emptySeats = document.getElementById('emptySeats').value;
+            const reg = document.getElementById('vehicleReg').value;
+            const mileage = document.getElementById('mileage').value;
+            const defects = document.getElementById('defects').value || "None reported";
+
+            let emailBody = `GO RIDE VEHICLE INSPECTION REPORT\n`;
+            emailBody += `====================================\n\n`;
+            emailBody += `Driver Name: ${driver}\n`;
+            emailBody += `Date: ${date}\n`;
+            emailBody += `Start Time: ${time}\n`;
+            emailBody += `Passengers: ${passengers}\n`;
+            emailBody += `Empty Seats: ${emptySeats}\n\n`;
+            emailBody += `Vehicle Registration: ${reg}\n`;
+            emailBody += `Current Mileage: ${mileage} miles\n\n`;
+            emailBody += `SAFETY CHECKLIST:\n`;
+            emailBody += `[✓] Tyre Tread & Pressure OK\n`;
+            emailBody += `[✓] Braking System Functional\n`;
+            emailBody += `[✓] Lights & Indicators Operational\n`;
+            emailBody += `[✓] Fluid Levels Checked\n\n`;
+            emailBody += `Defect Notes:\n${defects}\n`;
+
+            const subject = encodeURIComponent(`Inspection Report - ${reg} (${driver})`);
+            const body = encodeURIComponent(emailBody);
+            
+            window.location.href = `mailto:${destinationEmail}?subject=${subject}&body=${body}`;
+        }
+    </script>
+</body>
+</html>
